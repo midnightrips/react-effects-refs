@@ -10,6 +10,10 @@ function DeckViewer() {
     const [card, setCard] = useState(null);
     const [cardsLeft, setCardsLeft] = useState(null);
 
+    //btn refs
+    const drawCardBtn = useRef();
+    const shuffleDeckBtn = useRef();
+
     if (cardsLeft === 0) {
         alert("Error: no cards remaining!");
         return;
@@ -18,10 +22,18 @@ function DeckViewer() {
     useEffect(function fetchDeckWhenMounted() {
         async function fetchDeck() {
             try {
+                if (drawCardBtn.current) drawCardBtn.current.disabled = true;
+                if (shuffleDeckBtn.current) shuffleDeckBtn.current.disabled = true;
+
                 const newDeck = await axios.get(`${BASE_URL}/new/`);
                 setDeckId(newDeck.data.deck_id);
+                setCardsLeft(newDeck.data.remaining);
             } catch (err) {
                 console.error("Error fetching deck:", err);
+            } finally {
+                // Enable buttons after shuffle
+                if (drawCardBtn.current) drawCardBtn.current.disabled = false;
+                if (shuffleDeckBtn.current) shuffleDeckBtn.current.disabled = false;
             }
         }
         fetchDeck();
@@ -40,6 +52,23 @@ function DeckViewer() {
         }
     }
 
+    const shuffleDeck = async () => {
+        if (!deckId) return;
+
+        setCard(null);
+
+        try {
+            const res = await axios.get(`${BASE_URL}/${deckId}/shuffle/`); //https://deckofcardsapi.com/api/deck/<<deck_id>>/shuffle/
+            setCardsLeft(res.data.remaining);
+        } catch (err) {
+            console.error("Error shuffling deck:", err);
+        } finally {
+            // Enable buttons after reshuffle
+            if (drawCardBtn.current) drawCardBtn.current.disabled = false;
+            if (shuffleDeckBtn.current) shuffleDeckBtn.current.disabled = false;
+        }
+    }
+
     return (
         <div>
             {card ? (
@@ -51,6 +80,7 @@ function DeckViewer() {
             )}
             <p>Cards remaining: {cardsLeft}</p>
             <button onClick={drawCard}>Draw a card!</button>
+            <button onClick={shuffleDeck}>Shuffle deck</button>
         </div>
     );
 }
